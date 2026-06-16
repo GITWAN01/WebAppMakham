@@ -3,84 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time Google Sheets Dashboard</title>
+    <title>Real-time Data Logger</title>
     <style>
-        body { font-family: 'Arial', sans-serif; background-color: #f4f6f9; padding: 20px; }
-        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        h2 { color: #333; text-align: center; }
-        .status { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #4CAF50; color: white; }
-        tr:nth-child(even) { background-color: #f2f2f2; }
+        body { font-family: 'Tahoma', sans-serif; background-color: #f5f7fb; padding: 30px; color: #333; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        h2 { text-align: center; color: #1e293b; margin-top: 0; }
+        .status { text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 20px; font-weight: bold; }
+        
+        /* ฟอร์มกรอกข้อมูลตามหัวข้อตาราง */
+        .form-box { background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #e2e8f0; }
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .form-group { flex: 1; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #475569; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
+        .btn { background-color: #10b981; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; width: 100%; font-weight: bold; }
+        .btn:hover { background-color: #059669; }
+        
+        .table-responsive { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+        th { background-color: #0f172a; color: white; font-weight: 600; }
+        tr:nth-child(even) { background-color: #f8fafc; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>ข้อมูลเรียลไทม์จาก Google Sheets</h2>
-    <div class="status" id="status">กำลังอัปเดตข้อมูล...</div>
+    <h2>ระบบบันทึกและแสดงข้อมูล Accuracy</h2>
     
-    <table id="data-table">
-        <thead>
-            <tr id="table-header">
-                </tr>
-        </thead>
-        <tbody id="table-body">
-            </tbody>
-    </table>
+    <div class="form-box">
+        <h3>➕ บันทึกข้อมูลใหม่</h3>
+        <form id="data-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="input-id">ID:</label>
+                    <input type="number" id="input-id" required placeholder="เช่น 107">
+                </div>
+                <div class="form-group">
+                    <label for="input-output">Output:</label>
+                    <select id="input-output" required>
+                        <option value="A">A</option>
+                        <option value="B">B</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="input-accuracy">Accuracy (0.0 - 1.0):</label>
+                    <input type="number" id="input-accuracy" step="0.1" min="0" max="1" required placeholder="เช่น 0.8">
+                </div>
+            </div>
+            <button type="submit" class="btn" id="submit-btn">บันทึกข้อมูลเข้า Google Sheets</button>
+        </form>
+    </div>
+
+    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+
+    <div class="status" id="status">กำลังโหลดข้อมูล...</div>
+    
+    <div class="table-responsive">
+        <table>
+            <thead>
+                <tr id="table-header"></tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-    // 1. ใส่ Spreadsheet ID ของคุณที่นี่
-    const SHEET_ID = '1zdS8BNVxM9D7Xv0jiPu0EX1aDJnkzrBLzuhwxFBaEZ0'; 
-    const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+    // ⚠️ 1. ใส่ ID แผ่นงาน Google Sheets ของคุณที่นี่
+    const SHEET_ID = 'ใส่_SPREADSHEET_ID_ของคุณที่นี่'; 
+    const READ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+
+    // ⚠️ 2. เอา Web App URL จาก Apps Script มาใส่ที่นี่
+    const WRITE_URL = 'ใส่_WEB_APP_URL_จาก_APPS_SCRIPT_ตรงนี้';
+
+    function parseCSV(text) {
+        let p = '', r = [];
+        text.split('\n').forEach(line => {
+            if (!line.trim()) return;
+            let row = [], q = false;
+            line.split('').forEach(c => {
+                if (c === '"') q = !q;
+                else if (c === ',' && !q) { row.push(p.trim()); p = ''; }
+                else p += c;
+            });
+            row.push(p.trim()); p = '';
+            r.push(row);
+        });
+        return r;
+    }
 
     async function fetchData() {
         try {
-            const response = await fetch(URL);
+            const response = await fetch(READ_URL);
             const text = await response.text();
+            const rows = parseCSV(text);
             
-            // ลบข้อความส่วนเกินที่ Google ส่งกลับมาเพื่อให้เป็น JSON ที่สมบูรณ์
-            const jsonData = JSON.parse(text.substring(47, text.length - 2));
-            
-            const rows = jsonData.table.rows;
-            const cols = jsonData.table.cols;
+            if (rows.length === 0) return;
 
-            // สร้าง หัวตาราง (Header)
             const headerRow = document.getElementById('table-header');
             headerRow.innerHTML = '';
-            cols.forEach(col => {
-                headerRow.innerHTML += `<th>${col.label || 'ข้อมูล'}</th>`;
+            rows[0].forEach(header => {
+                headerRow.innerHTML += `<th>${header.replace(/"/g, '')}</th>`;
             });
 
-            // สร้าง เนื้อหาตาราง (Body)
             const tableBody = document.getElementById('table-body');
             tableBody.innerHTML = '';
-            
-            rows.forEach(row => {
-                let rowHtml = 'tr';
-                row.c.forEach(cell => {
-                    const value = cell ? cell.v : '';
-                    rowHtml += `<td>${value}</td>`;
+            for (let i = 1; i < rows.length; i++) {
+                let rowHtml = '';
+                rows[i].forEach(cell => {
+                    rowHtml += `<td>${cell.replace(/"/g, '')}</td>`;
                 });
-                rowHtml += '/tr';
                 tableBody.innerHTML += `<tr>${rowHtml}</tr>`;
-            });
-
-            // อัปเดตเวลารับข้อมูลล่าสุด
-            document.getElementById('status').innerText = `อัปเดตล่าสุดเมื่อ: ${new Date().toLocaleTimeString()}`;
-
+            }
+            document.getElementById('status').innerText = `อัปเดตล่าสุดเมื่อ: ${new Date().toLocaleTimeString()} น.`;
         } catch (error) {
-            console.error('Error fetching data:', error);
-            document.getElementById('status').innerText = 'เกิดข้อผิดพลาดในการดึงข้อมูล';
+            console.error('Error:', error);
         }
     }
 
-    // เรียกให้ทำงานครั้งแรกทันทีที่เปิดหน้าเว็บ
-    fetchData();
+    // ฟังก์ชันส่งข้อมูลเมื่อกดปุ่มบันทึก
+    document.getElementById('data-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submit-btn');
+        const idValue = document.getElementById('input-id').value;
+        const outputValue = document.getElementById('input-output').value;
+        const accuracyValue = document.getElementById('input-accuracy').value;
 
-    // 2. ตั้งเวลาให้ดึงข้อมูลใหม่ทุกๆ 5 วินาที (5000 ms)
+        submitBtn.innerText = 'กำลังส่งข้อมูลเข้าระบบ...';
+        submitBtn.disabled = true;
+
+        try {
+            await fetch(WRITE_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                cache: 'no-cache',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id_value: idValue, 
+                    output_value: outputValue, 
+                    accuracy_value: accuracyValue 
+                })
+            });
+
+            alert('บันทึกข้อมูลเรียบร้อย!');
+            document.getElementById('data-form').reset();
+            
+            // ดึงข้อมูลตารางใหม่ทันทีหลังส่งเสร็จ
+            setTimeout(fetchData, 1500); 
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert('เกิดข้อผิดพลาดในการบันทึก');
+        } finally {
+            submitBtn.innerText = 'บันทึกข้อมูลเข้า Google Sheets';
+            submitBtn.disabled = false;
+        }
+    });
+
+    fetchData();
     setInterval(fetchData, 5000);
 </script>
 
