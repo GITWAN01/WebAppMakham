@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-time Google Sheets Dashboard</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background-color: #f4f6f9; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2 { color: #333; text-align: center; }
+        .status { text-align: center; color: #888; font-size: 0.9em; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #4CAF50; color: white; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>ข้อมูลเรียลไทม์จาก Google Sheets</h2>
+    <div class="status" id="status">กำลังอัปเดตข้อมูล...</div>
+    
+    <table id="data-table">
+        <thead>
+            <tr id="table-header">
+                </tr>
+        </thead>
+        <tbody id="table-body">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    // 1. ใส่ Spreadsheet ID ของคุณที่นี่
+    const SHEET_ID = 'ใส่_SPREADSHEET_ID_ของคุณที่นี่'; 
+    const URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+    async function fetchData() {
+        try {
+            const response = await fetch(URL);
+            const text = await response.text();
+            
+            // ลบข้อความส่วนเกินที่ Google ส่งกลับมาเพื่อให้เป็น JSON ที่สมบูรณ์
+            const jsonData = JSON.parse(text.substring(47, text.length - 2));
+            
+            const rows = jsonData.table.rows;
+            const cols = jsonData.table.cols;
+
+            // สร้าง หัวตาราง (Header)
+            const headerRow = document.getElementById('table-header');
+            headerRow.innerHTML = '';
+            cols.forEach(col => {
+                headerRow.innerHTML += `<th>${col.label || 'ข้อมูล'}</th>`;
+            });
+
+            // สร้าง เนื้อหาตาราง (Body)
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = '';
+            
+            rows.forEach(row => {
+                let rowHtml = 'tr';
+                row.c.forEach(cell => {
+                    const value = cell ? cell.v : '';
+                    rowHtml += `<td>${value}</td>`;
+                });
+                rowHtml += '/tr';
+                tableBody.innerHTML += `<tr>${rowHtml}</tr>`;
+            });
+
+            // อัปเดตเวลารับข้อมูลล่าสุด
+            document.getElementById('status').innerText = `อัปเดตล่าสุดเมื่อ: ${new Date().toLocaleTimeString()}`;
+
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            document.getElementById('status').innerText = 'เกิดข้อผิดพลาดในการดึงข้อมูล';
+        }
+    }
+
+    // เรียกให้ทำงานครั้งแรกทันทีที่เปิดหน้าเว็บ
+    fetchData();
+
+    // 2. ตั้งเวลาให้ดึงข้อมูลใหม่ทุกๆ 5 วินาที (5000 ms)
+    setInterval(fetchData, 5000);
+</script>
+
+</body>
+</html>
