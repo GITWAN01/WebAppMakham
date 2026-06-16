@@ -3,79 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-time Data Logger</title>
+    <title>Minimal Live Dashboard & Analytics</title>
     <style>
-        body { font-family: 'Tahoma', sans-serif; background-color: #f5f7fb; padding: 30px; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        h2 { text-align: center; color: #1e293b; margin-top: 0; }
-        .status { text-align: center; color: #64748b; font-size: 0.9em; margin-bottom: 20px; font-weight: bold; }
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --accent-color: #000000;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 40px 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 840px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 1.75rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+            margin-bottom: 8px;
+        }
+
+        .status {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        /* Minimal Card Style */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        /* Form Layout */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .form-grid { grid-template-columns: 1fr; }
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: #fff;
+            font-size: 0.95rem;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        /* Buttons */
+        .btn {
+            background: var(--accent-color);
+            color: #fff;
+            border: none;
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            width: 100%;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.85; }
         
-        /* ฟอร์มกรอกข้อมูลตามหัวข้อตาราง */
-        .form-box { background: #f8fafc; padding: 20px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #e2e8f0; }
-        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
-        .form-group { flex: 1; }
-        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; color: #475569; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; box-sizing: border-box; }
-        .btn { background-color: #10b981; color: white; padding: 12px 20px; border: none; border-radius: 6px; cursor: pointer; font-size: 1rem; width: 100%; font-weight: bold; }
-        .btn:hover { background-color: #059669; }
-        
-        .table-responsive { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; border-radius: 8px; overflow: hidden; }
-        th, td { padding: 14px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-        th { background-color: #0f172a; color: white; font-weight: 600; }
-        tr:nth-child(even) { background-color: #f8fafc; }
+        .btn-secondary {
+            background: #fff;
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            margin-bottom: 20px;
+        }
+        .btn-secondary:hover { background: #f1f5f9; opacity: 1; }
+
+        /* Analytics Grid */
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+            display: none; /* ซ่อนไว้ก่อน พอกดคำนวณค่อยแสดง */
+        }
+
+        @media (max-width: 600px) {
+            .analytics-grid { grid-template-columns: 1fr; }
+        }
+
+        .analytics-item {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .analytics-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 6px;
+        }
+
+        .analytics-value {
+            font-size: 1.4rem;
+            font-weight: 600;
+        }
+
+        /* Minimal Table */
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-muted);
+            padding: 12px 16px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        td {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border-color);
+            color: #334155;
+        }
+
+        tr:hover td {
+            background-color: #f1f5f9;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>ระบบบันทึกและแสดงข้อมูล Accuracy</h2>
-    
-    <div class="form-box">
+    <header>
+        <h1>Data Logger & Analytics</h1>
+        <div class="status" id="status">กำลังดึงข้อมูล...</div>
+    </header>
+
+    <div class="card">
         <h3>➕ บันทึกข้อมูลใหม่</h3>
         <form id="data-form">
-            <div class="form-row">
+            <div class="form-grid">
                 <div class="form-group">
-                    <label for="input-id">ID:</label>
+                    <label for="input-id">ID</label>
                     <input type="number" id="input-id" required placeholder="เช่น 107">
                 </div>
                 <div class="form-group">
-                    <label for="input-output">Output:</label>
+                    <label for="input-output">Output</label>
                     <select id="input-output" required>
                         <option value="A">A</option>
                         <option value="B">B</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="input-accuracy">Accuracy (0.0 - 1.0):</label>
-                    <input type="number" id="input-accuracy" step="0.1" min="0" max="1" required placeholder="เช่น 0.8">
+                    <label for="input-accuracy">Accuracy (0.0 - 1.0)</label>
+                    <input type="number" id="input-accuracy" step="0.01" min="0" max="1" required placeholder="เช่น 0.85">
                 </div>
             </div>
-            <button type="submit" class="btn" id="submit-btn">บันทึกข้อมูลเข้า Google Sheets</button>
+            <button type="submit" class="btn" id="submit-btn">บันทึกข้อมูล</button>
         </form>
     </div>
 
-    <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+    <button class="btn btn-secondary" onclick="runAnalytics()">📊 คำนวณและประมวลผลสถิติ</button>
 
-    <div class="status" id="status">กำลังโหลดข้อมูล...</div>
-    
-    <div class="table-responsive">
-        <table>
-            <thead>
-                <tr id="table-header"></tr>
-            </thead>
-            <tbody id="table-body"></tbody>
-        </table>
+    <div class="analytics-grid" id="analytics-section">
+        <div class="analytics-item">
+            <div class="analytics-label">สัดส่วน Output (A / B)</div>
+            <div class="analytics-value" id="stat-output">-</div>
+        </div>
+        <div class="analytics-item">
+            <div class="analytics-label">ค่าเฉลี่ย Accuracy</div>
+            <div class="analytics-value" id="stat-avg-accuracy">-</div>
+        </div>
+        <div class="analytics-item">
+            <div class="analytics-label">ฐานนิยม Accuracy (Mode)</div>
+            <div class="analytics-value" id="stat-mode-accuracy">-</div>
+        </div>
+    </div>
+
+    <div class="card" style="padding: 16px;">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr id="table-header"></tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
     // ⚠️ 1. ใส่ ID แผ่นงาน Google Sheets ของคุณที่นี่
-    const SHEET_ID = '1zdS8BNVxM9D7Xv0jiPu0EX1aDJnkzrBLzuhwxFBaEZ0'; 
+    const SHEET_ID = 'ใส่_SPREADSHEET_ID_ของคุณที่นี่'; 
     const READ_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
     // ⚠️ 2. เอา Web App URL จาก Apps Script มาใส่ที่นี่
-    const WRITE_URL = 'https://script.google.com/macros/s/AKfycbxghz4UQdmYHNZXkp3woEX16A23weWcaCAsMPrO5KLXTc2jV-LinCT7XzC2PE8g40U/exec';
+    const WRITE_URL = 'ใส่_WEB_APP_URL_จาก_APPS_SCRIPT_ตรงนี้';
+
+    let globalRowsData = []; // เก็บข้อมูลตารางไว้คำนวณภายในเครื่องไม่ต้องดึงใหม่
 
     function parseCSV(text) {
         let p = '', r = [];
@@ -100,13 +281,16 @@
             const rows = parseCSV(text);
             
             if (rows.length === 0) return;
+            globalRowsData = rows; // เซฟลงตัวแปร Global
 
+            // สร้าง Header
             const headerRow = document.getElementById('table-header');
             headerRow.innerHTML = '';
             rows[0].forEach(header => {
                 headerRow.innerHTML += `<th>${header.replace(/"/g, '')}</th>`;
             });
 
+            // สร้าง Body
             const tableBody = document.getElementById('table-body');
             tableBody.innerHTML = '';
             for (let i = 1; i < rows.length; i++) {
@@ -116,22 +300,88 @@
                 });
                 tableBody.innerHTML += `<tr>${rowHtml}</tr>`;
             }
-            document.getElementById('status').innerText = `อัปเดตล่าสุดเมื่อ: ${new Date().toLocaleTimeString()} น.`;
+            document.getElementById('status').innerText = `ซิงค์ข้อมูลล่าสุดเมื่อ: ${new Date().toLocaleTimeString()}`;
         } catch (error) {
             console.error('Error:', error);
+            document.getElementById('status').innerText = 'การเชื่อมต่อขัดข้อง';
         }
     }
 
-    // ฟังก์ชันส่งข้อมูลเมื่อกดปุ่มบันทึก
+    // ฟังก์ชันคำนวณทางสถิติเมื่อกดปุ่ม
+    function runAnalytics() {
+        if (globalRowsData.length <= 1) {
+            alert('ยังไม่มีข้อมูลในตารางเพียงพอสำหรับคำนวณ');
+            return;
+        }
+
+        let countA = 0, countB = 0;
+        let accuracyList = [];
+        
+        // วนลูปเริ่มจากแถวที่ 1 (ข้ามหัวตารางแถวที่ 0)
+        for (let i = 1; i < globalRowsData.length; i++) {
+            let row = globalRowsData[i];
+            if (row.length < 4) continue;
+
+            // 1. นับจำนวนสาระของ Output (คอลัมน์ที่ 3 หรือ Index 2)
+            let outputVal = row[2].replace(/"/g, '').trim().toUpperCase();
+            if (outputVal === 'A') countA++;
+            if (outputVal === 'B') countB++;
+
+            // 2. เก็บค่า Accuracy มาคำนวณ (คอลัมน์ที่ 4 หรือ Index 3)
+            let accVal = parseFloat(row[3].replace(/"/g, '').trim());
+            if (!isNaN(accVal)) {
+                accuracyList.push(accVal);
+            }
+        }
+
+        let totalOutput = countA + countB;
+        let pA = totalOutput > 0 ? ((countA / totalOutput) * 100).toFixed(0) : 0;
+        let pB = totalOutput > 0 ? ((countB / totalOutput) * 100).toFixed(0) : 0;
+
+        // คำนวณค่าเฉลี่ย (Mean)
+        let sum = accuracyList.reduce((a, b) => a + b, 0);
+        let avgAccuracy = accuracyList.length > 0 ? (sum / accuracyList.length).toFixed(3) : 0;
+
+        // คำนวณค่าฐานนิยม (Mode)
+        let modeAccuracy = "-";
+        if (accuracyList.length > 0) {
+            let mapping = {};
+            let maxFreq = 0;
+            let modes = [];
+            
+            accuracyList.forEach(val => {
+                mapping[val] = (mapping[val] || 0) + 1;
+                if (mapping[val] > maxFreq) {
+                    maxFreq = mapping[val];
+                }
+            });
+
+            for (let val in mapping) {
+                if (mapping[val] === maxFreq) {
+                    modes.push(val);
+                }
+            }
+            modeAccuracy = modes.join(', ');
+        }
+
+        // นำผลลัพธ์ไปแสดงบนหน้าเว็บ
+        document.getElementById('stat-output').innerHTML = `A: ${countA} (${pA}%) <br> B: ${countB} (${pB}%)`;
+        document.getElementById('stat-avg-accuracy').innerText = avgAccuracy;
+        document.getElementById('stat-mode-accuracy').innerText = modeAccuracy;
+
+        // เปิดการแสดงผลแผงสถิติ
+        document.getElementById('analytics-section').style.display = 'grid';
+    }
+
+    // ฟังก์ชันส่งข้อมูลเข้า Google Sheets
     document.getElementById('data-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const submitBtn = document.getElementById('submit-btn');
         const idValue = document.getElementById('input-id').value;
         const outputValue = document.getElementById('input-output').value;
         const accuracyValue = document.getElementById('input-accuracy').value;
 
-        submitBtn.innerText = 'กำลังส่งข้อมูลเข้าระบบ...';
+        submitBtn.innerText = 'กำลังบันทึก...';
         submitBtn.disabled = true;
 
         try {
@@ -147,17 +397,13 @@
                 })
             });
 
-            alert('บันทึกข้อมูลเรียบร้อย!');
             document.getElementById('data-form').reset();
-            
-            // ดึงข้อมูลตารางใหม่ทันทีหลังส่งเสร็จ
             setTimeout(fetchData, 1500); 
-
         } catch (error) {
             console.error('Error:', error);
             alert('เกิดข้อผิดพลาดในการบันทึก');
         } finally {
-            submitBtn.innerText = 'บันทึกข้อมูลเข้า Google Sheets';
+            submitBtn.innerText = 'บันทึกข้อมูล';
             submitBtn.disabled = false;
         }
     });
